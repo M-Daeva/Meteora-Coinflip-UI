@@ -1,23 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHelpers } from "../hooks/useHelpers";
 import { useSolBalance } from "../hooks/useBalances";
+import { useChainNow } from "../hooks/useChainClock";
 import type { Protocol } from "../hooks/useProtocol";
 import { useActivity } from "../lib/activity";
 import { formatUnits } from "../lib/format";
 import { Button, Step } from "./ui";
 
 const MIN_SOL_LAMPORTS = 5_000_000n; // 0.005 SOL covers a handful of txs + ATA rent
-
-function useNow(active: boolean) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!active) return;
-    const t = setInterval(() => setNow(Date.now()), 1_000);
-    return () => clearInterval(t);
-  }, [active]);
-  return now;
-}
 
 function fmtWait(s: number) {
   const h = Math.floor(s / 3600);
@@ -44,9 +35,11 @@ export function FaucetStep({ protocol }: { protocol: Protocol }) {
     },
   });
 
+  // claimed_at is chain time, so the countdown runs on chain time too (device clock may be off)
   const nextClaimAt = user.data ? (user.data + protocol.faucetCooldownS) * 1000 : 0;
-  const now = useNow(nextClaimAt > Date.now());
-  const waitS = Math.max(0, Math.ceil((nextClaimAt - now) / 1000));
+  const chainNow = useChainNow(nextClaimAt > 0);
+  const syncing = nextClaimAt > 0 && chainNow === undefined;
+  const waitS = chainNow === undefined ? 0 : Math.max(0, Math.ceil((nextClaimAt - chainNow) / 1000));
   const lowSol = owner && sol.data !== undefined && sol.data < MIN_SOL_LAMPORTS;
 
   async function claim() {
@@ -68,7 +61,7 @@ export function FaucetStep({ protocol }: { protocol: Protocol }) {
       }
     >
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={claim} busy={busy} disabled={!owner || waitS > 0}>
+        <Button onClick={claim} busy={busy} disabled={!owner || waitS > 0 || syncing}>
           Claim {protocol.quote.symbol}
         </Button>
         {!owner && <span className="text-sm text-haze">Connect a wallet to claim.</span>}
