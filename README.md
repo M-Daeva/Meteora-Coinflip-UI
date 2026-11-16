@@ -4,7 +4,7 @@ A web client for **[Meteora Coinflip](https://github.com/M-Daeva/Meteora-Coinfli
 
 That repository holds the on-chain program (Rust, Anchor), the TypeScript clients and the LiteSVM tests. This repository is the frontend that runs the whole flow against the program deployed on **Solana devnet**.
 
-**Live demo:** _add link after deployment_
+**[Live demo](https://meteora-coinflip-ui-flax.vercel.app)**
 
 ## What a player does
 
